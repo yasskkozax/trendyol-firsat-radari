@@ -39,6 +39,26 @@ LISTING_SORT_OPTIONS = {
     "En çok değerlendirilen": "MOST_RATED",
     "En çok favorilenen": "MOST_FAVOURITE",
 }
+COMMISSION_PRESETS = {
+    "Manuel": None,
+    "Cep telefonu": 7.0,
+    "Laptop / tablet": 8.0,
+    "Beyaz eşya": 11.0,
+    "Küçük ev aletleri": 15.0,
+    "Gıda / süpermarket": 15.25,
+    "Anne & bebek": 16.5,
+    "Kozmetik / kişisel bakım": 16.78,
+    "Mutfak gereçleri / züccaciye": 19.32,
+    "Ev tekstili": 20.34,
+    "Giyim": 21.36,
+    "Çanta": 21.36,
+    "Saat": 21.36,
+    "Takı / bijuteri": 22.37,
+    "Ayakkabı": 23.39,
+}
+TRENDYOL_PLATFORM_SERVICE_FEE = 13.19
+TRENDYOL_SAME_DAY_SERVICE_FEE = 8.39
+TRENDYOL_STOPAJ_RATE = 1.0
 SAAT_VE_SAAT_BRANDS = [
     "Adidas Originals",
     "Armani Exchange",
@@ -92,29 +112,257 @@ SAAT_VE_SAAT_BRANDS = [
     "Wesse",
     "Xonix",
 ]
+TRENDYOL_HIGH_VOLUME_BRANDS = [
+    "Adidas",
+    "Adidas Originals",
+    "Altınyıldız Classics",
+    "Apple",
+    "Arçelik",
+    "Armani Exchange",
+    "Arzum",
+    "Avon",
+    "Baby Turco",
+    "Bambum",
+    "Bargello",
+    "Bershka",
+    "Bioderma",
+    "Bioxcin",
+    "Birkenstock",
+    "Bosch",
+    "Braun",
+    "Burberry",
+    "Calvin Klein",
+    "Casio",
+    "Chakra",
+    "Chicco",
+    "Colin's",
+    "Columbia",
+    "Converse",
+    "Cotton Box",
+    "Cream Co.",
+    "Crocs",
+    "D'S Damat",
+    "Daikin",
+    "Defacto",
+    "Delta",
+    "Derimod",
+    "Diadermine",
+    "Dilvin",
+    "Dyson",
+    "Emsan",
+    "English Home",
+    "Estee Lauder",
+    "Fakir",
+    "Farmasi",
+    "Fisher Price",
+    "Flormar",
+    "Flo",
+    "Fossil",
+    "Franke",
+    "Garnier",
+    "Gillette",
+    "GoldMaster",
+    "Gratis",
+    "Guess",
+    "H&M",
+    "HP",
+    "Harley Davidson",
+    "Huawei",
+    "Hummel",
+    "IKEA",
+    "Jack & Jones",
+    "JBL",
+    "KIKO",
+    "Karaca",
+    "Karaca Home",
+    "Karcher",
+    "Kiğılı",
+    "Kinetix",
+    "Koton",
+    "Korkmaz",
+    "L'Oreal Paris",
+    "LC Waikiki",
+    "LEGO",
+    "La Roche Posay",
+    "Lacoste",
+    "Lenovo",
+    "Levi's",
+    "Linens",
+    "Logitech",
+    "Lumberjack",
+    "Mango",
+    "Madame Coco",
+    "Mavi",
+    "Maybelline New York",
+    "Monster",
+    "Nike",
+    "New Balance",
+    "New Well",
+    "Nine West",
+    "Nivea",
+    "Oppo",
+    "Oral-B",
+    "Oriflame",
+    "Oxxo",
+    "Özdilek",
+    "Penti",
+    "Pastel",
+    "Paşabahçe",
+    "Philips",
+    "Pierre Cardin",
+    "Polo Garage",
+    "Porland",
+    "Pull&Bear",
+    "Puma",
+    "Reebok",
+    "Roborock",
+    "Rossmann",
+    "Samsung",
+    "Schafer",
+    "Skechers",
+    "Slazenger",
+    "Stradivarius",
+    "Suwen",
+    "TCL",
+    "Taç",
+    "Tefal",
+    "The North Face",
+    "The Purest Solutions",
+    "Tommy Hilfiger",
+    "Tupperware",
+    "U.S. Polo Assn.",
+    "Under Armour",
+    "Vakko",
+    "Vans",
+    "Vestel",
+    "Victoria's Secret",
+    "Watsons",
+    "Xiaomi",
+    "Yataş",
+    "Yves Rocher",
+    "Zara",
+    "Zara Home",
+    "ACAR",
+    "AbiyeSultan",
+    "Acer",
+    "Aclind",
+    "Adil Işık",
+    "Aker",
+    "Alcatel",
+    "Alix Avien",
+    "Altus",
+    "Anker",
+    "Arnica",
+    "Asus",
+    "Atasay",
+    "Avva",
+    "Bambi",
+    "Beko",
+    "Beymen",
+    "Beymen Club",
+    "Bioder",
+    "Bissell",
+    "Black+Decker",
+    "Blue House",
+    "Beko",
+    "Bonna",
+    "Bosch Home",
+    "Boyner",
+    "Bridgestone",
+    "Buratti",
+    "Canon",
+    "Celenes",
+    "Chima",
+    "Clinique",
+    "Coca-Cola",
+    "Cottonhill",
+    "Dagi",
+    "Damla",
+    "Darphin",
+    "Decathlon",
+    "Dell",
+    "Diadora",
+    "Dior",
+    "Dove",
+    "Dr. Oetker",
+    "E.C.A.",
+    "Eda Taşpınar",
+    "Elidor",
+    "Elle",
+    "Epson",
+    "Estee Lauder",
+    "Falcon",
+    "Fantom",
+    "Fitbit",
+    "Fox Shoes",
+    "General Mobile",
+    "George Hogg",
+    "Gizia",
+    "Goorin Bros",
+    "Güral Porselen",
+    "Hotiç",
+    "Homend",
+    "Hometech",
+    "Honor",
+    "In Street",
+    "Inci",
+    "İpekyol",
+    "Jumbo",
+    "Kahve Dünyası",
+    "Koton Kids",
+    "Kütahya Porselen",
+    "Lansinoh",
+    "Lee Cooper",
+    "Les Benjamins",
+    "Madmext",
+]
 BRAND_STOCK_BRANDS = {
-    **{brand: TRENDYOL_WATCH_CATEGORY_URL for brand in SAAT_VE_SAAT_BRANDS},
+    **{brand: None for brand in TRENDYOL_HIGH_VOLUME_BRANDS},
+    **{brand: None for brand in SAAT_VE_SAAT_BRANDS},
     "Apple": "https://www.trendyol.com/apple-x-b101470",
     "Samsung": "https://www.trendyol.com/samsung-x-b794",
     "Xiaomi": "https://www.trendyol.com/xiaomi-x-b101939",
+    "Arzum": "https://www.trendyol.com/arzum-x-b392",
     "Dyson": "https://www.trendyol.com/dyson-x-b102989",
+    "Fakir": "https://www.trendyol.com/fakir-x-b387",
+    "GoldMaster": "https://www.trendyol.com/goldmaster-x-b802",
     "Philips": "https://www.trendyol.com/philips-x-b577",
     "Tefal": "https://www.trendyol.com/tefal-x-b326",
     "Braun": "https://www.trendyol.com/braun-x-b633",
+    "Vestel": "https://www.trendyol.com/vestel-x-b102900",
     "Nike": "https://www.trendyol.com/nike-x-b44",
     "Adidas": "https://www.trendyol.com/adidas-x-b33",
     "Puma": "https://www.trendyol.com/puma-x-b160",
     "New Balance": "https://www.trendyol.com/new-balance-x-b128",
     "LEGO": "https://www.trendyol.com/lego-x-b104725",
     "KIKO": "https://www.trendyol.com/kiko-x-b108309",
+    "Guess": "https://www.trendyol.com/guess-x-b333",
+    "Cream Co.": "https://www.trendyol.com/cream-co-x-b146033",
+    "New Well": "https://www.trendyol.com/new-well-x-b104624",
+    "The Purest Solutions": "https://www.trendyol.com/the-purest-solutions-x-b132527",
+    "Flormar": "https://www.trendyol.com/flormar-x-b988",
+    "Pastel": "https://www.trendyol.com/pastel-x-b624",
     "Maybelline New York": "https://www.trendyol.com/maybelline-new-york-x-b476",
     "L'Oreal Paris": "https://www.trendyol.com/l-oreal-paris-x-b568",
     "Mango": "https://www.trendyol.com/mango-x-b41",
     "Zara": "https://www.trendyol.com/zara-x-b40",
+    "LC Waikiki": "https://www.trendyol.com/lc-waikiki-x-b859",
     "Madame Coco": "https://www.trendyol.com/madame-coco-x-b52",
     "English Home": "https://www.trendyol.com/english-home-x-b108306",
     "Korkmaz": "https://www.trendyol.com/korkmaz-x-b351",
     "Karaca": "https://www.trendyol.com/karaca-x-b325",
+    "Özdilek": "https://www.trendyol.com/ozdilek-x-b283",
+    "Taç": "https://www.trendyol.com/tac-x-b261",
+    "Karaca Home": "https://www.trendyol.com/karaca-home-x-b653",
+    "Yataş": "https://www.trendyol.com/yatas-x-b397",
+    "Cotton Box": "https://www.trendyol.com/cotton-box-x-b698",
+    "Linens": "https://www.trendyol.com/linens-x-b477",
+    "Porland": "https://www.trendyol.com/porland-x-b404",
+    "Emsan": "https://www.trendyol.com/emsan-x-b651",
+    "Paşabahçe": "https://www.trendyol.com/pasabahce-x-b440",
+    "Schafer": "https://www.trendyol.com/schafer-x-b373",
+    "Bambum": "https://www.trendyol.com/bambum-x-b776",
+    "ACAR": "https://www.trendyol.com/acar-x-b110584",
 }
 BRAND_STOCK_PRODUCTS_PER_PAGE = 24
 LOGO_PATH = Path(__file__).parent / "assets" / "kozade.png"
@@ -393,6 +641,15 @@ def apply_kozade_theme():
         [data-baseweb="popover"] li:hover {{
             background: #2a2824 !important;
             color: var(--kozade-cream) !important;
+        }}
+
+        [data-baseweb="tooltip"],
+        [data-baseweb="tooltip"] *,
+        [data-testid="stTooltipContent"],
+        [data-testid="stTooltipContent"] * {{
+            background: var(--kozade-ink) !important;
+            color: var(--kozade-cream) !important;
+            fill: var(--kozade-cream) !important;
         }}
 
         [data-baseweb="tag"] {{
@@ -1274,15 +1531,15 @@ def signal_hit(signal, min_sales_3d, min_views_1d, min_basket, min_favorite, max
     favorite = pd.to_numeric(signal.get("Favori"), errors="coerce")
     best_rank = pd.to_numeric(signal.get("Çok satan sıra"), errors="coerce")
 
-    if pd.notna(sales_3d) and int(sales_3d) >= min_sales_3d:
+    if min_sales_3d is not None and pd.notna(sales_3d) and int(sales_3d) >= min_sales_3d:
         hits.append(f"3g satış {int(sales_3d)}+")
-    if pd.notna(views_1d) and int(views_1d) >= min_views_1d:
+    if min_views_1d is not None and pd.notna(views_1d) and int(views_1d) >= min_views_1d:
         hits.append(f"1g görüntülenme {int(views_1d)}+")
-    if pd.notna(basket) and int(basket) >= min_basket:
+    if min_basket is not None and pd.notna(basket) and int(basket) >= min_basket:
         hits.append(f"sepette {int(basket)}+")
-    if pd.notna(favorite) and int(favorite) >= min_favorite:
+    if min_favorite is not None and pd.notna(favorite) and int(favorite) >= min_favorite:
         hits.append(f"favori {int(favorite)}+")
-    if pd.notna(best_rank) and int(best_rank) <= max_best_rank:
+    if max_best_rank is not None and pd.notna(best_rank) and int(best_rank) <= max_best_rank:
         hits.append(f"çok satan sıra {int(best_rank)}")
 
     return hits
@@ -1394,10 +1651,17 @@ def find_brand_stock_products(
 ):
     checked_rows = []
     errors = []
+    stats = {
+        "Ürün kontrol": 0,
+        "Marka eşleşti": 0,
+        "Stok okunabildi": 0,
+        "Stok eşiği üstü": 0,
+    }
 
     for index, product in enumerate(products, start=1):
         progress.progress(index / max(len(products), 1), text=f"{index}/{len(products)} marka/stok kontrol ediliyor")
         product_id = str(product["Ürün ID"])
+        stats["Ürün kontrol"] += 1
 
         try:
             source = fetch_page(product["Link"])
@@ -1409,6 +1673,7 @@ def find_brand_stock_products(
 
         if not brand_matches(summary.get("Marka"), selected_brands, custom_brand_filter):
             continue
+        stats["Marka eşleşti"] += 1
 
         seller_records = []
         for row in rows:
@@ -1423,7 +1688,11 @@ def find_brand_stock_products(
         valid_stocks = [record["stock"] for record in seller_records if record["stock"] is not None]
         max_product_stock = max(valid_stocks) if valid_stocks else None
         if max_product_stock is None or max_product_stock > max_stock:
+            if max_product_stock is not None:
+                stats["Stok okunabildi"] += 1
+                stats["Stok eşiği üstü"] += 1
             continue
+        stats["Stok okunabildi"] += 1
 
         top_stock_record = next(
             (record for record in seller_records if record["stock"] == max_product_stock),
@@ -1458,7 +1727,7 @@ def find_brand_stock_products(
             checked_rows.append(record)
 
     progress.empty()
-    return checked_rows, errors
+    return checked_rows, errors, stats
 
 
 def unique_products(products):
@@ -1497,6 +1766,7 @@ def product_summary_rows(checked_df):
 
         top_seller = None
         top_stock = None
+        total_stock = None
         other_stocks = None
         seller_stock_text = None
 
@@ -1506,13 +1776,12 @@ def product_summary_rows(checked_df):
             top_row = stock_rows.iloc[0]
             top_seller = top_row.get("Satıcı")
             top_stock = int(top_row["_stock_numeric"])
+            total_stock = int(stock_rows["_stock_numeric"].dropna().sum())
             other_values = [str(int(value)) for value in stock_rows["_stock_numeric"].iloc[1:].dropna()]
             other_stocks = "/".join(other_values) if other_values else None
-            seller_stock_text = " / ".join(
-                f"{row.get('Satıcı')}: {int(row['_stock_numeric'])}"
-                for _, row in stock_rows.iterrows()
-                if pd.notna(row.get("_stock_numeric"))
-            )
+            seller_stock_text = f"{top_seller}: {top_stock}"
+            if other_stocks:
+                seller_stock_text = f"{seller_stock_text} / {other_stocks}"
 
         summary_rows.append(
             {
@@ -1522,7 +1791,7 @@ def product_summary_rows(checked_df):
                 "Liste etiketi": first_present(group.get("Liste etiketi", pd.Series(dtype=object))),
                 "En yüksek stok satıcısı": top_seller,
                 "En yüksek stok": top_stock,
-                "Ürün max stok": first_present(group.get("Ürün max stok", pd.Series(dtype=object))) or top_stock,
+                "Toplam stok": total_stock,
                 "Max stok satıcısı": first_present(group.get("Max stok satıcısı", pd.Series(dtype=object))) or top_seller,
                 "Diğer stoklar": other_stocks,
                 "Satıcı stokları": seller_stock_text,
@@ -1573,6 +1842,95 @@ def product_link_column_config():
             display_text="Trendyol",
         )
     }
+
+
+def vat_portion(gross_amount, vat_rate):
+    amount = pd.to_numeric(gross_amount, errors="coerce")
+    rate = pd.to_numeric(vat_rate, errors="coerce")
+    if pd.isna(amount) or pd.isna(rate) or amount <= 0 or rate <= 0:
+        return 0.0
+    return float(amount) - (float(amount) / (1 + float(rate) / 100))
+
+
+def calculate_profit(
+    sale_price,
+    purchase_price,
+    commission_rate,
+    vat_rate,
+    cargo_fee,
+    cargo_paid_by_seller,
+    service_fee,
+    marketing_fee,
+    packaging_fee,
+    other_fee,
+    include_vat_payable,
+):
+    sale_price = float(sale_price or 0)
+    purchase_price = float(purchase_price or 0)
+    commission_rate = float(commission_rate or 0)
+    vat_rate = float(vat_rate or 0)
+    cargo_fee = float(cargo_fee or 0) if cargo_paid_by_seller else 0.0
+    service_fee = float(service_fee or 0)
+    marketing_fee = float(marketing_fee or 0)
+    packaging_fee = float(packaging_fee or 0)
+    other_fee = float(other_fee or 0)
+
+    commission = sale_price * commission_rate / 100
+    sale_vat = vat_portion(sale_price, vat_rate)
+    net_sale_price = sale_price - sale_vat
+    stopaj = net_sale_price * TRENDYOL_STOPAJ_RATE / 100
+    gross_expenses = {
+        "Ürün alış": purchase_price,
+        "Komisyon": commission,
+        "Kargo": cargo_fee,
+        "Hizmet bedeli": service_fee,
+        "Pazarlama gideri": marketing_fee,
+        "Stopaj": stopaj,
+        "Paketleme": packaging_fee,
+        "Diğer gider": other_fee,
+    }
+
+    deductible_vat = sum(
+        vat_portion(value, vat_rate)
+        for key, value in gross_expenses.items()
+        if key not in ["Stopaj", "Paketleme"]
+    )
+    payable_vat = sale_vat - deductible_vat
+    vat_cash_out = payable_vat if include_vat_payable else 0.0
+    total_expense = sum(gross_expenses.values()) + vat_cash_out
+    profit = sale_price - total_expense
+    profit_margin = (profit / sale_price * 100) if sale_price else 0.0
+    roi = (profit / purchase_price * 100) if purchase_price else 0.0
+
+    return {
+        "Satış fiyatı": sale_price,
+        "Toplam gider": total_expense,
+        "Kâr": profit,
+        "Kâr oranı": profit_margin,
+        "Yatırım geri dönüşü": roi,
+        "Komisyon": commission,
+        "Stopaj": stopaj,
+        "Stopaj oranı": TRENDYOL_STOPAJ_RATE,
+        "Satıştan oluşan KDV": sale_vat,
+        "Giderlerden düşülecek KDV": deductible_vat,
+        "Ödenecek KDV": payable_vat,
+        **gross_expenses,
+    }
+
+
+def target_sale_price(base_args, target_profit_rate):
+    target_profit_rate = float(target_profit_rate or 0)
+    low = 0.01
+    high = 1000000.0
+    for _ in range(80):
+        mid = (low + high) / 2
+        result = calculate_profit(sale_price=mid, **base_args)
+        margin = result["Kâr oranı"]
+        if margin < target_profit_rate:
+            low = mid
+        else:
+            high = mid
+    return high
 
 
 def configurable_table(df, key_prefix, default_columns=None, use_expander=True):
@@ -1686,8 +2044,8 @@ def configurable_table(df, key_prefix, default_columns=None, use_expander=True):
 st.title("Trendyol Fırsat Radarı")
 st.caption("Kategori seç, çok satan ürünleri tara, 3 günlük satış adedi ile satıcı stoklarını karşılaştır.")
 
-radar_tab, manual_tab, brand_stock_tab, single_tab = st.tabs(
-    ["Fırsat radarı", "Manuel ürün özeti", "Marka ve stok", "Tek ürün stok okuyucu"]
+radar_tab, manual_tab, brand_stock_tab, profit_tab, single_tab = st.tabs(
+    ["Fırsat radarı", "Manuel ürün özeti", "Marka ve stok", "Kâr hesabı", "Tek ürün stok okuyucu"]
 )
 
 with radar_tab:
@@ -1750,18 +2108,76 @@ with radar_tab:
         min_basket = 1000
         min_favorite = 10000
         max_best_rank = 20
+        use_sales_signal = True
+        use_views_signal = True
+        use_basket_signal = True
+        use_favorite_signal = True
+        use_rank_signal = True
 
         if sales_source == "Trendyol ibareleri":
             max_stock = st.number_input("Maksimum stok", min_value=1, max_value=10000, value=150, step=10)
-            min_sales_3d = st.number_input("Min. 3 günlük satış ibaresi", min_value=1, max_value=100000, value=100, step=50)
-            min_views_1d = st.number_input("Min. 1 günlük görüntülenme", min_value=1, max_value=1000000, value=2000, step=500)
-            min_basket = st.number_input("Min. sepette", min_value=1, max_value=1000000, value=1000, step=250)
-            col_a, col_b = st.columns(2)
-            with col_a:
-                min_favorite = st.number_input("Min. favori", min_value=1, max_value=1000000, value=10000, step=1000)
-            with col_b:
-                max_best_rank = st.number_input("Maks. çok satan sıra", min_value=1, max_value=1000, value=20, step=1)
-            st.info("Fırsat kuralı: stok <= maksimum stok ve talep sinyallerinden en az biri eşik üstü.")
+            st.caption("Talep sinyallerinden istediklerini kapatabilirsin.")
+            sales_toggle_col, sales_value_col = st.columns([0.45, 1])
+            with sales_toggle_col:
+                use_sales_signal = st.checkbox("3g satış", value=True, key="use_sales_signal")
+            with sales_value_col:
+                min_sales_3d = st.number_input(
+                    "Min. 3 günlük satış ibaresi",
+                    min_value=1,
+                    max_value=100000,
+                    value=100,
+                    step=50,
+                    disabled=not use_sales_signal,
+                )
+            views_toggle_col, views_value_col = st.columns([0.45, 1])
+            with views_toggle_col:
+                use_views_signal = st.checkbox("1g görüntülenme", value=True, key="use_views_signal")
+            with views_value_col:
+                min_views_1d = st.number_input(
+                    "Min. 1 günlük görüntülenme",
+                    min_value=1,
+                    max_value=1000000,
+                    value=2000,
+                    step=500,
+                    disabled=not use_views_signal,
+                )
+            basket_toggle_col, basket_value_col = st.columns([0.45, 1])
+            with basket_toggle_col:
+                use_basket_signal = st.checkbox("Sepette", value=True, key="use_basket_signal")
+            with basket_value_col:
+                min_basket = st.number_input(
+                    "Min. sepette",
+                    min_value=1,
+                    max_value=1000000,
+                    value=1000,
+                    step=250,
+                    disabled=not use_basket_signal,
+                )
+            favorite_toggle_col, favorite_value_col = st.columns([0.45, 1])
+            with favorite_toggle_col:
+                use_favorite_signal = st.checkbox("Favori", value=True, key="use_favorite_signal")
+            with favorite_value_col:
+                min_favorite = st.number_input(
+                    "Min. favori",
+                    min_value=1,
+                    max_value=1000000,
+                    value=10000,
+                    step=1000,
+                    disabled=not use_favorite_signal,
+                )
+            rank_toggle_col, rank_value_col = st.columns([0.45, 1])
+            with rank_toggle_col:
+                use_rank_signal = st.checkbox("Çok satan sıra", value=True, key="use_rank_signal")
+            with rank_value_col:
+                max_best_rank = st.number_input(
+                    "Maks. çok satan sıra",
+                    min_value=1,
+                    max_value=1000,
+                    value=20,
+                    step=1,
+                    disabled=not use_rank_signal,
+                )
+            st.info("Fırsat kuralı: stok <= maksimum stok ve açık talep sinyallerinden en az biri eşik üstü.")
         elif sales_source == "CSV / metin":
             uploaded_file = st.file_uploader(
                 "Nekadarsatti satış verisi CSV",
@@ -1816,6 +2232,17 @@ with radar_tab:
                 sales_rows = []
                 sales_errors = []
                 if sales_source == "Trendyol ibareleri":
+                    active_signal_count = sum(
+                        [
+                            use_sales_signal,
+                            use_views_signal,
+                            use_basket_signal,
+                            use_favorite_signal,
+                            use_rank_signal,
+                        ]
+                    )
+                    if active_signal_count == 0:
+                        raise ValueError("En az bir talep sinyali açık olmalı.")
                     progress = st.progress(0, text="Trendyol ibareleri ve stoklar kontrol ediliyor")
                     opportunities, checked, errors = find_signal_opportunities(
                         products,
@@ -1823,11 +2250,11 @@ with radar_tab:
                         selected_brands,
                         custom_brand_filter,
                         max_stock,
-                        min_sales_3d,
-                        min_views_1d,
-                        min_basket,
-                        min_favorite,
-                        max_best_rank,
+                        min_sales_3d if use_sales_signal else None,
+                        min_views_1d if use_views_signal else None,
+                        min_basket if use_basket_signal else None,
+                        min_favorite if use_favorite_signal else None,
+                        max_best_rank if use_rank_signal else None,
                         progress,
                     )
                 elif sales_source == "Nekadarsatti otomatik":
@@ -1954,7 +2381,7 @@ with manual_tab:
 
 with brand_stock_tab:
     st.subheader("Marka ve stok")
-    st.caption("Seçtiğin markanın Trendyol marka sayfasını tarar ve ürün max stoku belirlediğin eşiğin altında kalanları listeler.")
+    st.caption("Seçtiğin markanın Trendyol marka sayfasını veya arama sonuçlarını tarar ve ürün max stoku belirlediğin eşiğin altında kalanları listeler.")
 
     brand_name_col, max_stock_col, product_count_col = st.columns([1, 1, 1])
 
@@ -2003,24 +2430,31 @@ with brand_stock_tab:
                 per_brand_limit = int(brand_stock_product_limit)
                 for brand_name in selected_brand_names:
                     brand_url = BRAND_STOCK_BRANDS.get(brand_name)
-                    if not brand_url:
-                        continue
                     st.write(f"{brand_name}: ürünler çekiliyor...")
-                    products.extend(
-                        discover_category_products(
-                            brand_url,
-                            brand_stock_pages,
-                            per_brand_limit,
-                            None,
+                    if brand_url:
+                        products.extend(
+                            discover_category_products(
+                                brand_url,
+                                brand_stock_pages,
+                                per_brand_limit,
+                                None,
+                            )
                         )
-                    )
+                    else:
+                        products.extend(
+                            discover_search_products(
+                                brand_name,
+                                brand_stock_pages,
+                                per_brand_limit,
+                            )
+                        )
                 products = unique_products(products)[: int(brand_stock_product_limit)]
                 if not products:
                     raise RuntimeError("Marka sayfasından ürün linki çıkarılamadı.")
                 st.write(f"{len(products)} ürün bulundu.")
 
                 progress = st.progress(0, text="Marka ve stoklar kontrol ediliyor")
-                checked, errors = find_brand_stock_products(
+                checked, errors, stats = find_brand_stock_products(
                     products,
                     "",
                     selected_brand_names,
@@ -2034,6 +2468,7 @@ with brand_stock_tab:
                 "products": products,
                 "checked": checked,
                 "errors": errors,
+                "stats": stats,
                 "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "max_stock": brand_stock_max,
                 "brand": ", ".join(selected_brand_names),
@@ -2054,10 +2489,17 @@ with brand_stock_tab:
         metric_cols[1].metric("Eşleşen ürün", len(product_summary_df))
         metric_cols[2].metric("Satıcı/varyant satırı", len(checked_df))
         metric_cols[3].metric("Hata", len(errors_df))
+        stats = result.get("stats", {})
         st.caption(
             f"Son kontrol: {result['checked_at']} | Marka: {result.get('brand', '-')} | "
             f"Maksimum ürün stoku: {result['max_stock']} | Ürün limiti: {result.get('product_limit', '-')}"
         )
+        if stats:
+            st.caption(
+                f"Kontrol özeti: marka eşleşen {stats.get('Marka eşleşti', 0)} ürün, "
+                f"stok okunabilen {stats.get('Stok okunabildi', 0)} ürün, "
+                f"stok eşiği üstünde kalan {stats.get('Stok eşiği üstü', 0)} ürün."
+            )
 
         if product_summary_df.empty:
             st.info("Bu marka ve maksimum stok eşiğiyle ürün bulunamadı.")
@@ -2068,7 +2510,7 @@ with brand_stock_tab:
                 "Marka",
                 "En yüksek stok satıcısı",
                 "En yüksek stok",
-                "Ürün max stok",
+                "Toplam stok",
                 "Satıcı stokları",
                 "Favori",
                 "Yorum",
@@ -2107,7 +2549,7 @@ with brand_stock_tab:
                         "Satıcı",
                         "Varyant",
                         "Stok",
-                        "Ürün max stok",
+                        "Toplam stok",
                         "Fiyat",
                         "Favori",
                         "Yorum",
@@ -2132,6 +2574,156 @@ with brand_stock_tab:
                     hide_index=True,
                     column_config=product_link_column_config(),
                 )
+
+with profit_tab:
+    st.subheader("Kâr hesabı")
+    st.caption("Satış, alış, komisyon, KDV, kargo ve ek giderleri girerek Trendyol net kârını hesaplar.")
+
+    price_col, fee_col = st.columns([1, 1])
+
+    with price_col:
+        selected_commission_category = st.selectbox(
+            "Kategori / komisyon preset",
+            options=list(COMMISSION_PRESETS.keys()),
+            index=list(COMMISSION_PRESETS.keys()).index("Saat"),
+        )
+        preset_commission = COMMISSION_PRESETS[selected_commission_category]
+        sale_price = st.number_input(
+            "Ürün satış fiyatı (KDV dahil)",
+            min_value=0.0,
+            value=1000.0,
+            step=10.0,
+            format="%.2f",
+        )
+        purchase_price = st.number_input(
+            "Ürün alış fiyatı (KDV dahil)",
+            min_value=0.0,
+            value=600.0,
+            step=10.0,
+            format="%.2f",
+        )
+        commission_rate = st.number_input(
+            "Komisyon %",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(preset_commission if preset_commission is not None else 20.0),
+            step=0.1,
+            format="%.2f",
+        )
+        vat_rate = st.number_input(
+            "KDV %",
+            min_value=0.0,
+            max_value=100.0,
+            value=20.0,
+            step=1.0,
+            format="%.2f",
+        )
+        include_vat_payable = st.checkbox("Ödenecek KDV'yi kârdan düş", value=True)
+
+    with fee_col:
+        cargo_paid_by_seller = st.checkbox("Kargo satıcıya ait", value=True)
+        cargo_fee = st.number_input(
+            "Kargo ücreti (KDV dahil)",
+            min_value=0.0,
+            value=85.0,
+            step=5.0,
+            format="%.2f",
+            disabled=not cargo_paid_by_seller,
+        )
+        service_fee_type = st.radio(
+            "Platform hizmet bedeli",
+            options=["Standart", "Bugün Kargoda"],
+            horizontal=True,
+        )
+        service_fee = (
+            TRENDYOL_SAME_DAY_SERVICE_FEE
+            if service_fee_type == "Bugün Kargoda"
+            else TRENDYOL_PLATFORM_SERVICE_FEE
+        )
+        st.caption(
+            f"Hizmet bedeli: {service_fee:,.2f} TL | "
+            f"Stopaj: KDV hariç satış x %{TRENDYOL_STOPAJ_RATE:g}"
+        )
+        marketing_fee = st.number_input(
+            "Pazarlama / reklam gideri (KDV dahil)",
+            min_value=0.0,
+            value=0.0,
+            step=5.0,
+            format="%.2f",
+        )
+        packaging_fee = st.number_input(
+            "Paketleme gideri",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            format="%.2f",
+        )
+        other_fee = st.number_input(
+            "Diğer gider (KDV dahil)",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            format="%.2f",
+        )
+
+    base_profit_args = {
+        "purchase_price": purchase_price,
+        "commission_rate": commission_rate,
+        "vat_rate": vat_rate,
+        "cargo_fee": cargo_fee,
+        "cargo_paid_by_seller": cargo_paid_by_seller,
+        "service_fee": service_fee,
+        "marketing_fee": marketing_fee,
+        "packaging_fee": packaging_fee,
+        "other_fee": other_fee,
+        "include_vat_payable": include_vat_payable,
+    }
+    profit_result = calculate_profit(sale_price=sale_price, **base_profit_args)
+
+    st.divider()
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Net kâr", f"{profit_result['Kâr']:,.2f} TL")
+    metric_cols[1].metric("Kâr oranı", f"%{profit_result['Kâr oranı']:,.2f}")
+    metric_cols[2].metric("Yatırım geri dönüşü", f"%{profit_result['Yatırım geri dönüşü']:,.2f}")
+    metric_cols[3].metric("Toplam gider", f"{profit_result['Toplam gider']:,.2f} TL")
+
+    target_col, target_result_col = st.columns([1, 1])
+    with target_col:
+        target_profit_rate = st.number_input(
+            "Hedef kâr oranı için gereken satış fiyatı",
+            min_value=0.0,
+            max_value=95.0,
+            value=20.0,
+            step=1.0,
+            format="%.2f",
+        )
+    with target_result_col:
+        target_price = target_sale_price(base_profit_args, target_profit_rate)
+        st.metric("Gerekli satış fiyatı", f"{target_price:,.2f} TL")
+
+    detail_rows = [
+        ("Satış fiyatı", profit_result["Satış fiyatı"]),
+        ("Ürün alış", profit_result["Ürün alış"]),
+        ("Komisyon", profit_result["Komisyon"]),
+        ("Kargo", profit_result["Kargo"]),
+        ("Hizmet bedeli", profit_result["Hizmet bedeli"]),
+        ("Pazarlama gideri", profit_result["Pazarlama gideri"]),
+        ("Stopaj", profit_result["Stopaj"]),
+        ("Paketleme", profit_result["Paketleme"]),
+        ("Diğer gider", profit_result["Diğer gider"]),
+        ("Satıştan oluşan KDV", profit_result["Satıştan oluşan KDV"]),
+        ("Giderlerden düşülecek KDV", profit_result["Giderlerden düşülecek KDV"]),
+        ("Ödenecek KDV", profit_result["Ödenecek KDV"]),
+        ("Toplam gider", profit_result["Toplam gider"]),
+        ("Net kâr", profit_result["Kâr"]),
+    ]
+    detail_df = pd.DataFrame(detail_rows, columns=["Kalem", "Tutar"])
+    detail_df["Tutar"] = detail_df["Tutar"].map(lambda value: f"{value:,.2f} TL")
+    st.dataframe(detail_df, use_container_width=True, hide_index=True)
+    st.caption(
+        "Komisyon presetleri yaklaşık başlangıç değeridir. Kesin oranı ürün alt kategorisine göre "
+        "Trendyol Satıcı Paneli'nden kontrol edip manuel komisyon alanına yaz."
+    )
 
 with single_tab:
     left_col, right_col = st.columns([1.2, 0.8])
