@@ -953,6 +953,83 @@ def find_signal_opportunities(
     return opportunity_rows, checked_rows, errors
 
 
+def find_brand_stock_products(
+    products,
+    seller_filter,
+    selected_brands,
+    custom_brand_filter,
+    max_stock,
+    progress,
+):
+    checked_rows = []
+    errors = []
+
+    for index, product in enumerate(products, start=1):
+        progress.progress(index / max(len(products), 1), text=f"{index}/{len(products)} marka/stok kontrol ediliyor")
+        product_id = str(product["Ürün ID"])
+
+        try:
+            source = fetch_page(product["Link"])
+            summary, rows, _ = analyze_source(source)
+            signal = analyze_trendyol_signals(source)
+        except Exception as exc:
+            errors.append({"Ürün ID": product_id, "Ürün": product["Ürün"], "Hata": str(exc), "Link": product["Link"]})
+            continue
+
+        if not brand_matches(summary.get("Marka"), selected_brands, custom_brand_filter):
+            continue
+
+        seller_records = []
+        for row in rows:
+            seller_name = str(row.get("Satıcı") or "")
+            if seller_filter and seller_filter.casefold() not in seller_name.casefold():
+                continue
+
+            quantity = pd.to_numeric(row.get("Quantity"), errors="coerce")
+            stock_value = int(quantity) if pd.notna(quantity) else None
+            seller_records.append({"row": row, "stock": stock_value})
+
+        valid_stocks = [record["stock"] for record in seller_records if record["stock"] is not None]
+        max_product_stock = max(valid_stocks) if valid_stocks else None
+        if max_product_stock is None or max_product_stock > max_stock:
+            continue
+
+        top_stock_record = next(
+            (record for record in seller_records if record["stock"] == max_product_stock),
+            None,
+        )
+
+        for seller_record in seller_records:
+            row = seller_record["row"]
+            record = {
+                "Sıra": product["Sıra"],
+                "Ürün ID": product_id,
+                "Ürün": summary.get("Ürün") or product["Ürün"],
+                "Marka": summary.get("Marka"),
+                "Liste etiketi": product.get("Liste etiketi"),
+                "Satıcı": row.get("Satıcı"),
+                "Varyant": row.get("Varyant"),
+                "Stok": seller_record["stock"],
+                "Ürün max stok": max_product_stock,
+                "Max stok satıcısı": top_stock_record["row"].get("Satıcı") if top_stock_record else None,
+                "Fırsat": "Evet",
+                "3g satış ibaresi": signal.get("3 günlük satış ibaresi"),
+                "1g görüntülenme": signal.get("1 günlük görüntülenme ibaresi"),
+                "Sepette": signal.get("Sepet ibaresi"),
+                "Favori": signal.get("Favori"),
+                "Yorum": signal.get("Yorum"),
+                "Değerlendirme": signal.get("Değerlendirme"),
+                "Çok satan sıra": signal.get("Çok satan sıra"),
+                "Fiyat": row.get("Fiyat"),
+                "Listing ID": row.get("Listing ID"),
+                "Link": product["Link"],
+            }
+            checked_rows.append(record)
+
+    progress.empty()
+    return checked_rows, errors
+
+
 def dataframe_download(df):
     return df.to_csv(index=False).encode("utf-8-sig")
 
@@ -1056,7 +1133,9 @@ def product_link_column_config():
 st.title("Trendyol Fırsat Radarı")
 st.caption("Kategori seç, çok satan ürünleri tara, 3 günlük satış adedi ile satıcı stoklarını karşılaştır.")
 
-radar_tab, manual_tab, single_tab = st.tabs(["Fırsat radarı", "Manuel ürün özeti", "Tek ürün stok okuyucu"])
+radar_tab, manual_tab, brand_stock_tab, single_tab = st.tabs(
+    ["Fırsat radarı", "Manuel ürün özeti", "Marka ve stok", "Tek ürün stok okuyucu"]
+)
 
 with radar_tab:
     controls, sales_panel = st.columns([1, 1])
@@ -1319,6 +1398,189 @@ with manual_tab:
                 file_name="trendyol_urun_ozetleri.csv",
                 mime="text/csv",
             )
+
+with brand_stock_tab:
+    st.subheader("Marka ve stok")
+    st.caption("Seçtiğin kategori listesindeki ürünleri tarar, sadece seçtiğin markaya ait ve ürün max stoku belirlediğin eşiğin altında olanları listeler.")
+
+    brand_controls, brand_filters = st.columns([1, 1])
+
+    with brand_controls:
+        brand_category_names = list(TRENDYOL_CATEGORIES.keys()) + ["Özel kategori linki"]
+        brand_selected_category = st.selectbox(
+            "Trendyol kategorisi",
+            brand_category_names,
+            index=30,
+            key="brand_stock_category",
+        )
+        brand_custom_category_url = ""
+        if brand_selected_category == "Özel kategori linki":
+            brand_custom_category_url = st.text_input(
+                "Kategori linki",
+                placeholder="https://www.trendyol.com/saat-x-c34",
+                key="brand_stock_custom_category_url",
+            )
+        brand_category_url = brand_custom_category_url.strip() or TRENDYOL_CATEGORIES.get(brand_selected_category)
+
+        brand_listing_sort = st.selectbox(
+            "Liste türü",
+            list(LISTING_SORT_OPTIONS.keys()),
+            index=0,
+            key="brand_stock_listing_sort",
+        )
+        brand_pages = st.slider(
+            "Taranacak sayfa",
+            min_value=1,
+            max_value=20,
+            value=3,
+            key="brand_stock_pages",
+        )
+        brand_product_limit = st.slider(
+            "Kontrol edilecek ürün",
+            min_value=5,
+            max_value=300,
+            value=60,
+            step=5,
+            key="brand_stock_product_limit",
+        )
+
+    with brand_filters:
+        brand_suggestions = CATEGORY_BRANDS.get(brand_selected_category, [])
+        if st.button("Kategori markalarını getir", use_container_width=True, key="brand_stock_fetch_brands"):
+            if not brand_category_url:
+                st.warning("Önce kategori seç veya özel kategori linki gir.")
+            else:
+                with st.spinner("Markalar çekiliyor..."):
+                    discovered_brands = discover_category_brands(brand_category_url)
+                if discovered_brands:
+                    st.session_state[f"brand_stock_brands:{brand_category_url}"] = discovered_brands
+                    st.success(f"{len(discovered_brands)} marka bulundu.")
+                else:
+                    st.warning("Bu kategori sayfasından marka çıkarılamadı. Markayı ek marka alanına yazabilirsin.")
+
+        discovered_brand_key = f"brand_stock_brands:{brand_category_url}"
+        if discovered_brand_key in st.session_state:
+            brand_suggestions = sorted(
+                set(brand_suggestions).union(st.session_state[discovered_brand_key]),
+                key=str.casefold,
+            )
+
+        brand_stock_selected_brands = st.multiselect(
+            "Marka",
+            options=brand_suggestions,
+            key="brand_stock_selected_brands",
+        )
+        brand_stock_custom_brand = st.text_input(
+            "Ek marka",
+            placeholder="Örn. Guess, Casio",
+            key="brand_stock_custom_brand",
+        )
+        brand_stock_max = st.number_input(
+            "Maksimum ürün stoku",
+            min_value=1,
+            max_value=100000,
+            value=150,
+            step=10,
+            key="brand_stock_max_stock",
+        )
+        brand_stock_seller_filter = st.text_input(
+            "Satıcı filtresi (opsiyonel)",
+            placeholder="Örn. Saat & Saat",
+            key="brand_stock_seller_filter",
+        )
+
+    run_brand_stock = st.button("Marka stoklarını listele", type="primary", use_container_width=True)
+
+    if run_brand_stock:
+        try:
+            if not brand_category_url:
+                raise ValueError("Kategori linki boş olamaz.")
+            if not brand_stock_selected_brands and not brand_stock_custom_brand.strip():
+                raise ValueError("Önce marka seç veya ek marka alanına marka yaz.")
+
+            with st.status("Kategori ürünleri çekiliyor...", expanded=True) as status:
+                products = discover_category_products(
+                    brand_category_url,
+                    brand_pages,
+                    brand_product_limit,
+                    LISTING_SORT_OPTIONS[brand_listing_sort],
+                )
+                if not products:
+                    raise RuntimeError("Kategori sayfasından ürün linki çıkarılamadı.")
+                st.write(f"{len(products)} ürün bulundu.")
+
+                progress = st.progress(0, text="Marka ve stoklar kontrol ediliyor")
+                checked, errors = find_brand_stock_products(
+                    products,
+                    brand_stock_seller_filter.strip(),
+                    brand_stock_selected_brands,
+                    brand_stock_custom_brand,
+                    brand_stock_max,
+                    progress,
+                )
+                status.update(label="Marka stok taraması tamamlandı.", state="complete")
+
+            st.session_state["brand_stock_result"] = {
+                "products": products,
+                "checked": checked,
+                "errors": errors,
+                "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "max_stock": brand_stock_max,
+            }
+        except Exception as exc:
+            st.error(str(exc))
+
+    if "brand_stock_result" in st.session_state:
+        result = st.session_state["brand_stock_result"]
+        checked_df = pd.DataFrame(result["checked"])
+        errors_df = pd.DataFrame(result["errors"])
+        product_summary_df = product_summary_rows(checked_df)
+
+        st.divider()
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Taranan ürün", len(result["products"]))
+        metric_cols[1].metric("Eşleşen ürün", len(product_summary_df))
+        metric_cols[2].metric("Satıcı/varyant satırı", len(checked_df))
+        metric_cols[3].metric("Hata", len(errors_df))
+        st.caption(f"Son kontrol: {result['checked_at']} | Maksimum ürün stoku: {result['max_stock']}")
+
+        if product_summary_df.empty:
+            st.info("Bu marka ve maksimum stok eşiğiyle ürün bulunamadı.")
+        else:
+            st.dataframe(
+                display_product_links(product_summary_df),
+                use_container_width=True,
+                hide_index=True,
+                column_config=product_link_column_config(),
+            )
+            st.download_button(
+                "Marka stok listesini CSV indir",
+                data=dataframe_download(product_summary_df),
+                file_name="trendyol_marka_stok_listesi.csv",
+                mime="text/csv",
+            )
+
+        with st.expander("Satıcı/varyant detayları"):
+            if checked_df.empty:
+                st.info("Detay satırı yok.")
+            else:
+                st.dataframe(
+                    display_product_links(checked_df),
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config=product_link_column_config(),
+                )
+
+        with st.expander("Hatalar"):
+            if errors_df.empty:
+                st.success("Hata yok.")
+            else:
+                st.dataframe(
+                    display_product_links(errors_df),
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config=product_link_column_config(),
+                )
 
 with single_tab:
     left_col, right_col = st.columns([1.2, 0.8])

@@ -74,6 +74,12 @@ Otomatik mod şu an en fazla 30 sorgu seçtirir ve sorgular arasına bekleme koy
 
 Kategori seçiminden sonra ilgili kategori için önerilen markalar marka filtresinde görünür. Ek markaları virgülle yazabilirsin.
 
+## Marka ve stok sekmesi
+
+`Marka ve stok` sekmesinde kategori, liste türü, marka ve maksimum ürün stoku seçilir. Uygulama seçilen listedeki ürünleri tarar, sadece seçilen markaya ait olanları bırakır ve ürünün tüm satıcıları içindeki en yüksek stok değeri maksimum stok eşiğini aşmıyorsa ürünü listeler.
+
+Sonuçta ürün başına tek satır görünür; ürün adına bağlı Trendyol linki, en yüksek stok satıcısı, ürün max stok değeri ve diğer satıcı stokları birlikte gösterilir.
+
 ## CSV / metin formatı
 
 `nekadarsatti.com` verisini CSV olarak yükleyebilir veya metin alanına yapıştırabilirsin. Uygulama şu kolon adlarını otomatik tanır:
