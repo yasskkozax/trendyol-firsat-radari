@@ -1,5 +1,6 @@
 import base64
 import csv
+import hashlib
 import html
 import io
 import json
@@ -32,6 +33,7 @@ TRENDYOL_WATCH_CATEGORY_URL = "https://www.trendyol.com/saat-x-c34"
 NEKADARSATTI_API_URL = "https://nekadarsatti.com/api/sales-number"
 NEKADARSATTI_PUBLIC_API_KEY = "aJ9cgcACBCY1d3dWmJhWW8n2v2GhgP"
 NEKADARSATTI_QUERY_LIMIT = 30
+AUTH_QUERY_PARAM = "kozade_auth"
 
 LISTING_SORT_OPTIONS = {
     "En çok satan": "BEST_SELLER",
@@ -450,7 +452,15 @@ def require_password():
     if not app_password:
         return True
 
+    auth_token = hashlib.sha256(app_password.encode("utf-8")).hexdigest()
+    query_token = st.query_params.get(AUTH_QUERY_PARAM)
+    if query_token == auth_token:
+        st.session_state["authenticated"] = True
+        return True
+
     if st.session_state.get("authenticated"):
+        if st.query_params.get(AUTH_QUERY_PARAM) != auth_token:
+            st.query_params[AUTH_QUERY_PARAM] = auth_token
         return True
 
     st.title("Trendyol Fırsat Radarı")
@@ -459,6 +469,7 @@ def require_password():
     if st.button("Giriş yap", type="primary"):
         if password == app_password:
             st.session_state["authenticated"] = True
+            st.query_params[AUTH_QUERY_PARAM] = auth_token
             st.rerun()
         else:
             st.error("Şifre hatalı.")
