@@ -7,6 +7,7 @@ import json
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -1580,7 +1581,6 @@ def find_signal_opportunities(
         try:
             source = fetch_page(product["Link"])
             summary, rows, _ = analyze_source(source)
-            signal = analyze_trendyol_signals(source)
         except Exception as exc:
             errors.append({"Ürün ID": product_id, "Ürün": product["Ürün"], "Hata": str(exc), "Link": product["Link"]})
             continue
@@ -1659,6 +1659,8 @@ def find_brand_stock_products(
     custom_brand_filter,
     max_stock,
     progress,
+    start_index=0,
+    batch_size=None,
 ):
     checked_rows = []
     errors = []
@@ -1668,8 +1670,10 @@ def find_brand_stock_products(
         "Stok okunabildi": 0,
         "Stok eşiği üstü": 0,
     }
+    end_index = len(products) if batch_size is None else min(len(products), start_index + batch_size)
+    batch_products = products[start_index:end_index]
 
-    for index, product in enumerate(products, start=1):
+    for index, product in enumerate(batch_products, start=start_index + 1):
         progress.progress(index / max(len(products), 1), text=f"{index}/{len(products)} marka/stok kontrol ediliyor")
         product_id = str(product["Ürün ID"])
         stats["Ürün kontrol"] += 1
@@ -1724,13 +1728,9 @@ def find_brand_stock_products(
                 "Ürün max stok": max_product_stock,
                 "Max stok satıcısı": top_stock_record["row"].get("Satıcı") if top_stock_record else None,
                 "Fırsat": "Evet",
-                "3g satış ibaresi": signal.get("3 günlük satış ibaresi"),
-                "1g görüntülenme": signal.get("1 günlük görüntülenme ibaresi"),
-                "Sepette": signal.get("Sepet ibaresi"),
-                "Favori": signal.get("Favori"),
-                "Yorum": signal.get("Yorum"),
-                "Değerlendirme": signal.get("Değerlendirme"),
-                "Çok satan sıra": signal.get("Çok satan sıra"),
+                "Favori": summary.get("Favori"),
+                "Yorum": summary.get("Yorum"),
+                "Değerlendirme": summary.get("Değerlendirme"),
                 "Fiyat": row.get("Fiyat"),
                 "Listing ID": row.get("Listing ID"),
                 "Link": product["Link"],
@@ -1738,7 +1738,137 @@ def find_brand_stock_products(
             checked_rows.append(record)
 
     progress.empty()
-    return checked_rows, errors, stats
+    return checked_rows, errors, stats, end_index
+
+
+def check_brand_stock_product(product, selected_brands, custom_brand_filter, seller_filter, max_stock):
+    product_id = str(product["Ürün ID"])
+    stats = {
+        "Ürün kontrol": 1,
+        "Marka eşleşti": 0,
+        "Stok okunabildi": 0,
+        "Stok eşiği üstü": 0,
+    }
+
+    try:
+        source = fetch_page(product["Link"])
+        summary, rows, _ = analyze_source(source)
+    except Exception as exc:
+        return [], [{"Ürün ID": product_id, "Ürün": product["Ürün"], "Hata": str(exc), "Link": product["Link"]}], stats
+
+    if not brand_matches(summary.get("Marka"), selected_brands, custom_brand_filter):
+        return [], [], stats
+    stats["Marka eşleşti"] += 1
+
+    seller_records = []
+    for row in rows:
+        seller_name = str(row.get("Satıcı") or "")
+        if seller_filter and seller_filter.casefold() not in seller_name.casefold():
+            continue
+
+        quantity = pd.to_numeric(row.get("Quantity"), errors="coerce")
+        stock_value = int(quantity) if pd.notna(quantity) else None
+        seller_records.append({"row": row, "stock": stock_value})
+
+    valid_stocks = [record["stock"] for record in seller_records if record["stock"] is not None]
+    max_product_stock = max(valid_stocks) if valid_stocks else None
+    if max_product_stock is None or max_product_stock > max_stock:
+        if max_product_stock is not None:
+            stats["Stok okunabildi"] += 1
+            stats["Stok eşiği üstü"] += 1
+        return [], [], stats
+    stats["Stok okunabildi"] += 1
+
+    top_stock_record = next(
+        (record for record in seller_records if record["stock"] == max_product_stock),
+        None,
+    )
+    checked_rows = []
+    for seller_record in seller_records:
+        row = seller_record["row"]
+        checked_rows.append(
+            {
+                "Sıra": product["Sıra"],
+                "Ürün ID": product_id,
+                "Ürün": summary.get("Ürün") or product["Ürün"],
+                "Marka": summary.get("Marka"),
+                "Liste etiketi": product.get("Liste etiketi"),
+                "Satıcı": row.get("Satıcı"),
+                "Varyant": row.get("Varyant"),
+                "Stok": seller_record["stock"],
+                "Ürün max stok": max_product_stock,
+                "Max stok satıcısı": top_stock_record["row"].get("Satıcı") if top_stock_record else None,
+                "Fırsat": "Evet",
+                "Favori": summary.get("Favori"),
+                "Yorum": summary.get("Yorum"),
+                "Değerlendirme": summary.get("Değerlendirme"),
+                "Fiyat": row.get("Fiyat"),
+                "Listing ID": row.get("Listing ID"),
+                "Link": product["Link"],
+            }
+        )
+
+    return checked_rows, [], stats
+
+
+def find_brand_stock_products_parallel(
+    products,
+    seller_filter,
+    selected_brands,
+    custom_brand_filter,
+    max_stock,
+    progress,
+    live_container,
+    existing_checked=None,
+    start_index=0,
+    batch_size=None,
+    workers=8,
+):
+    checked_rows = []
+    errors = []
+    stats = {
+        "Ürün kontrol": 0,
+        "Marka eşleşti": 0,
+        "Stok okunabildi": 0,
+        "Stok eşiği üstü": 0,
+    }
+    end_index = len(products) if batch_size is None else min(len(products), start_index + batch_size)
+    batch_products = products[start_index:end_index]
+    completed = start_index
+    preview_rows = list(existing_checked or [])[-80:]
+
+    with ThreadPoolExecutor(max_workers=max(1, int(workers))) as executor:
+        futures = {
+            executor.submit(
+                check_brand_stock_product,
+                product,
+                selected_brands,
+                custom_brand_filter,
+                seller_filter,
+                max_stock,
+            ): product
+            for product in batch_products
+        }
+        for future in as_completed(futures):
+            completed += 1
+            product_checked, product_errors, product_stats = future.result()
+            checked_rows.extend(product_checked)
+            errors.extend(product_errors)
+            stats = merge_stats(stats, product_stats)
+            if product_checked:
+                preview_rows.extend(product_checked)
+                preview_df = product_summary_rows(pd.DataFrame(preview_rows), include_signal_columns=False)
+                if not preview_df.empty:
+                    live_container.dataframe(
+                        display_product_links(preview_df),
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config=product_link_column_config(),
+                    )
+            progress.progress(completed / max(len(products), 1), text=f"{completed}/{len(products)} marka/stok kontrol ediliyor")
+
+    progress.empty()
+    return checked_rows, errors, stats, end_index
 
 
 def unique_products(products):
@@ -1766,7 +1896,14 @@ def first_present(series):
     return None
 
 
-def product_summary_rows(checked_df):
+def merge_stats(base, addition):
+    merged = dict(base or {})
+    for key, value in (addition or {}).items():
+        merged[key] = int(merged.get(key, 0)) + int(value or 0)
+    return merged
+
+
+def product_summary_rows(checked_df, include_signal_columns=True):
     if checked_df.empty or "Ürün ID" not in checked_df.columns:
         return pd.DataFrame()
 
@@ -1794,31 +1931,35 @@ def product_summary_rows(checked_df):
             if other_stocks:
                 seller_stock_text = f"{seller_stock_text} / {other_stocks}"
 
-        summary_rows.append(
-            {
-                "Ürün ID": product_id,
-                "Ürün": first_present(group.get("Ürün", pd.Series(dtype=object))),
-                "Marka": first_present(group.get("Marka", pd.Series(dtype=object))),
-                "Liste etiketi": first_present(group.get("Liste etiketi", pd.Series(dtype=object))),
-                "En yüksek stok satıcısı": top_seller,
-                "En yüksek stok": top_stock,
-                "Toplam stok": total_stock,
-                "Max stok satıcısı": first_present(group.get("Max stok satıcısı", pd.Series(dtype=object))) or top_seller,
-                "Diğer stoklar": other_stocks,
-                "Satıcı stokları": seller_stock_text,
-                "3 günlük satış": first_present(group.get("3 günlük satış", pd.Series(dtype=object))),
-                "3g satış ibaresi": first_present(group.get("3g satış ibaresi", pd.Series(dtype=object))),
-                "1g görüntülenme": first_present(group.get("1g görüntülenme", pd.Series(dtype=object))),
-                "Sepette": first_present(group.get("Sepette", pd.Series(dtype=object))),
-                "Favori": first_present(group.get("Favori", pd.Series(dtype=object))),
-                "Yorum": first_present(group.get("Yorum", pd.Series(dtype=object))),
-                "Değerlendirme": first_present(group.get("Değerlendirme", pd.Series(dtype=object))),
-                "Çok satan sıra": first_present(group.get("Çok satan sıra", pd.Series(dtype=object))),
-                "Sinyal": first_present(group.get("Sinyal", pd.Series(dtype=object))),
-                "Fırsat satırı var": "Evet" if (group.get("Fırsat", pd.Series(dtype=object)) == "Evet").any() else "Hayır",
-                "Link": first_present(group.get("Link", pd.Series(dtype=object))),
-            }
-        )
+        summary_row = {
+            "Ürün ID": product_id,
+            "Ürün": first_present(group.get("Ürün", pd.Series(dtype=object))),
+            "Marka": first_present(group.get("Marka", pd.Series(dtype=object))),
+            "Liste etiketi": first_present(group.get("Liste etiketi", pd.Series(dtype=object))),
+            "En yüksek stok satıcısı": top_seller,
+            "En yüksek stok": top_stock,
+            "Toplam stok": total_stock,
+            "Max stok satıcısı": first_present(group.get("Max stok satıcısı", pd.Series(dtype=object))) or top_seller,
+            "Diğer stoklar": other_stocks,
+            "Satıcı stokları": seller_stock_text,
+            "Favori": first_present(group.get("Favori", pd.Series(dtype=object))),
+            "Yorum": first_present(group.get("Yorum", pd.Series(dtype=object))),
+            "Değerlendirme": first_present(group.get("Değerlendirme", pd.Series(dtype=object))),
+            "Fırsat satırı var": "Evet" if (group.get("Fırsat", pd.Series(dtype=object)) == "Evet").any() else "Hayır",
+            "Link": first_present(group.get("Link", pd.Series(dtype=object))),
+        }
+        if include_signal_columns:
+            summary_row.update(
+                {
+                    "3 günlük satış": first_present(group.get("3 günlük satış", pd.Series(dtype=object))),
+                    "3g satış ibaresi": first_present(group.get("3g satış ibaresi", pd.Series(dtype=object))),
+                    "1g görüntülenme": first_present(group.get("1g görüntülenme", pd.Series(dtype=object))),
+                    "Sepette": first_present(group.get("Sepette", pd.Series(dtype=object))),
+                    "Çok satan sıra": first_present(group.get("Çok satan sıra", pd.Series(dtype=object))),
+                    "Sinyal": first_present(group.get("Sinyal", pd.Series(dtype=object))),
+                }
+            )
+        summary_rows.append(summary_row)
 
     result = pd.DataFrame(summary_rows)
     if "En yüksek stok" in result.columns:
@@ -2366,7 +2507,7 @@ with manual_tab:
     else:
         result = st.session_state["radar_result"]
         checked_df = pd.DataFrame(result["checked"])
-        product_summary_df = product_summary_rows(checked_df)
+        product_summary_df = product_summary_rows(checked_df, include_signal_columns=False)
 
         metric_cols = st.columns(4)
         metric_cols[0].metric("Ürün", len(product_summary_df))
@@ -2424,67 +2565,156 @@ with brand_stock_tab:
             key="brand_stock_product_limit",
         )
 
-    run_brand_stock = st.button("Marka stoklarını listele", type="primary", use_container_width=True)
+    brand_batch_size = st.slider(
+        "Tek seferde kontrol edilecek ürün",
+        min_value=50,
+        max_value=500,
+        value=200,
+        step=50,
+        help="Online sitede kapanma yaşamamak için büyük taramaları parça parça çalıştırır.",
+    )
+    brand_parallel_workers = st.slider(
+        "Hız",
+        min_value=1,
+        max_value=12,
+        value=8,
+        step=1,
+        help="Aynı anda kaç ürün sayfası kontrol edilsin. Bağlantı zayıfsa düşür.",
+    )
 
-    if run_brand_stock:
+    active_result = st.session_state.get("brand_stock_result")
+    scan_running = bool(active_result and active_result.get("running") and not active_result.get("complete"))
+
+    button_col_a, button_col_b = st.columns([1, 0.35])
+    with button_col_a:
+        run_brand_stock = st.button(
+            "Marka stoklarını başlat / devam et",
+            type="primary",
+            use_container_width=True,
+            disabled=scan_running,
+        )
+    with button_col_b:
+        stop_brand_stock = st.button("Durdur", use_container_width=True, disabled=not scan_running)
+
+    reset_brand_stock = st.button("Sonucu sıfırla", use_container_width=True)
+
+    if reset_brand_stock:
+        st.session_state.pop("brand_stock_result", None)
+        st.rerun()
+
+    if stop_brand_stock and active_result:
+        active_result["running"] = False
+        st.session_state["brand_stock_result"] = active_result
+        st.rerun()
+
+    if run_brand_stock and active_result and not active_result.get("complete"):
+        active_result["running"] = True
+        st.session_state["brand_stock_result"] = active_result
+        st.rerun()
+
+    if run_brand_stock or scan_running:
         try:
             selected_brand_names = [brand.strip() for brand in brand_stock_brands if brand.strip()]
             if not selected_brand_names:
                 raise ValueError("Önce en az bir marka seç.")
 
-            with st.status("Marka ürünleri çekiliyor...", expanded=True) as status:
-                brand_stock_pages = max(
-                    1,
-                    int((brand_stock_product_limit + BRAND_STOCK_PRODUCTS_PER_PAGE - 1) // BRAND_STOCK_PRODUCTS_PER_PAGE),
-                )
-                products = []
-                per_brand_limit = int(brand_stock_product_limit)
-                for brand_name in selected_brand_names:
-                    brand_url = BRAND_STOCK_BRANDS.get(brand_name)
-                    st.write(f"{brand_name}: ürünler çekiliyor...")
-                    if brand_url:
-                        products.extend(
-                            discover_category_products(
-                                brand_url,
-                                brand_stock_pages,
-                                per_brand_limit,
-                                None,
+            result = st.session_state.get("brand_stock_result")
+            result_signature = {
+                "brand": ", ".join(selected_brand_names),
+                "max_stock": int(brand_stock_max),
+                "product_limit": int(brand_stock_product_limit),
+            }
+            if (
+                not result
+                or result.get("brand") != result_signature["brand"]
+                or int(result.get("max_stock", 0)) != result_signature["max_stock"]
+                or int(result.get("product_limit", 0)) != result_signature["product_limit"]
+            ):
+                with st.status("Marka ürünleri çekiliyor...", expanded=True) as status:
+                    brand_stock_pages = max(
+                        1,
+                        int((brand_stock_product_limit + BRAND_STOCK_PRODUCTS_PER_PAGE - 1) // BRAND_STOCK_PRODUCTS_PER_PAGE),
+                    )
+                    products = []
+                    per_brand_limit = int(brand_stock_product_limit)
+                    for brand_name in selected_brand_names:
+                        brand_url = BRAND_STOCK_BRANDS.get(brand_name)
+                        st.write(f"{brand_name}: ürünler çekiliyor...")
+                        if brand_url:
+                            products.extend(
+                                discover_category_products(
+                                    brand_url,
+                                    brand_stock_pages,
+                                    per_brand_limit,
+                                    None,
+                                )
                             )
-                        )
-                    else:
-                        products.extend(
-                            discover_search_products(
-                                brand_name,
-                                brand_stock_pages,
-                                per_brand_limit,
+                        else:
+                            products.extend(
+                                discover_search_products(
+                                    brand_name,
+                                    brand_stock_pages,
+                                    per_brand_limit,
+                                )
                             )
-                        )
-                products = unique_products(products)[: int(brand_stock_product_limit)]
-                if not products:
-                    raise RuntimeError("Marka sayfasından ürün linki çıkarılamadı.")
-                st.write(f"{len(products)} ürün bulundu.")
+                    products = unique_products(products)[: int(brand_stock_product_limit)]
+                    if not products:
+                        raise RuntimeError("Marka sayfasından ürün linki çıkarılamadı.")
+                    st.write(f"{len(products)} ürün bulundu.")
+                    status.update(label="Ürün listesi hazır.", state="complete")
+                result = {
+                    "products": products,
+                    "checked": [],
+                    "errors": [],
+                    "stats": {},
+                    "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "max_stock": result_signature["max_stock"],
+                    "brand": result_signature["brand"],
+                    "product_limit": result_signature["product_limit"],
+                    "next_index": 0,
+                    "complete": False,
+                    "running": True,
+                }
+            else:
+                result["running"] = True
 
+            products = result["products"]
+            start_index = int(result.get("next_index", 0))
+            if start_index >= len(products):
+                result["complete"] = True
+                result["running"] = False
+                st.session_state["brand_stock_result"] = result
+                st.success("Bu tarama zaten tamamlanmış.")
+            else:
                 progress = st.progress(0, text="Marka ve stoklar kontrol ediliyor")
-                checked, errors, stats = find_brand_stock_products(
+                live_container = st.empty()
+                checked, errors, stats, next_index = find_brand_stock_products_parallel(
                     products,
                     "",
                     selected_brand_names,
                     "",
                     brand_stock_max,
                     progress,
+                    live_container,
+                    existing_checked=result.get("checked", []),
+                    start_index=start_index,
+                    batch_size=int(brand_batch_size),
+                    workers=int(brand_parallel_workers),
                 )
-                status.update(label="Marka stok taraması tamamlandı.", state="complete")
-
-            st.session_state["brand_stock_result"] = {
-                "products": products,
-                "checked": checked,
-                "errors": errors,
-                "stats": stats,
-                "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "max_stock": brand_stock_max,
-                "brand": ", ".join(selected_brand_names),
-                "product_limit": int(brand_stock_product_limit),
-            }
+                result["checked"].extend(checked)
+                result["errors"].extend(errors)
+                result["stats"] = merge_stats(result.get("stats"), stats)
+                result["next_index"] = next_index
+                result["checked_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                result["complete"] = next_index >= len(products)
+                result["running"] = not result["complete"]
+                st.session_state["brand_stock_result"] = result
+                if result["complete"]:
+                    st.success("Marka stok taraması tamamlandı.")
+                else:
+                    st.info(f"{next_index}/{len(products)} ürün kontrol edildi. Otomatik devam ediyor...")
+                    time.sleep(0.5)
+                    st.rerun()
         except Exception as exc:
             st.error(str(exc))
 
@@ -2505,6 +2735,14 @@ with brand_stock_tab:
             f"Son kontrol: {result['checked_at']} | Marka: {result.get('brand', '-')} | "
             f"Maksimum ürün stoku: {result['max_stock']} | Ürün limiti: {result.get('product_limit', '-')}"
         )
+        next_index = int(result.get("next_index", len(result["products"]) if result.get("complete") else 0))
+        total_products = len(result["products"])
+        progress_ratio = next_index / max(total_products, 1)
+        st.progress(progress_ratio, text=f"İlerleme: {next_index}/{total_products} ürün kontrol edildi")
+        if result.get("running") and not result.get("complete"):
+            st.info("Tarama otomatik devam ediyor. İstersen Durdur butonuyla ara verebilirsin.")
+        elif not result.get("complete"):
+            st.info("Tarama duraklatıldı. Devam etmek için başlat/devam et butonuna bas.")
         if stats:
             st.caption(
                 f"Kontrol özeti: marka eşleşen {stats.get('Marka eşleşti', 0)} ürün, "
@@ -2526,7 +2764,6 @@ with brand_stock_tab:
                 "Favori",
                 "Yorum",
                 "Değerlendirme",
-                "Çok satan sıra",
             ]
             filtered_summary_df = configurable_table(
                 product_summary_df,
