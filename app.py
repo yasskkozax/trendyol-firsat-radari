@@ -42,6 +42,7 @@ AUTH_QUERY_PARAM = "kozade_auth"
 RUNTIME_DIR = Path(__file__).parent / ".runtime"
 BRAND_STOCK_STATE_PATH = RUNTIME_DIR / "brand_stock_result.json"
 FAVORITES_DB_PATH = RUNTIME_DIR / "favorites.db"
+FAVORITES_DATABASE_URL = os.getenv("FAVORITES_DATABASE_URL") or os.getenv("DATABASE_URL")
 
 LISTING_SORT_OPTIONS = {
     "En çok satan": "BEST_SELLER",
@@ -2553,35 +2554,53 @@ def clear_brand_stock_state():
         pass
 
 
+FAVORITES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS favorites (
+    product_id TEXT PRIMARY KEY,
+    product_name TEXT,
+    brand TEXT,
+    category TEXT,
+    link TEXT,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL
+)
+"""
+
+
 def favorites_connection():
+    if FAVORITES_DATABASE_URL:
+        import psycopg2
+
+        connection = psycopg2.connect(FAVORITES_DATABASE_URL)
+        with connection.cursor() as cursor:
+            cursor.execute(FAVORITES_TABLE_SQL)
+        connection.commit()
+        return connection
+
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(FAVORITES_DB_PATH, timeout=30)
     connection.execute("PRAGMA journal_mode=WAL")
-    connection.execute(
-        """
-        CREATE TABLE IF NOT EXISTS favorites (
-            product_id TEXT PRIMARY KEY,
-            product_name TEXT,
-            brand TEXT,
-            category TEXT,
-            link TEXT,
-            payload TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-        """
-    )
+    connection.execute(FAVORITES_TABLE_SQL)
     return connection
+
+
+def favorites_uses_postgres(connection):
+    return connection.__class__.__module__.startswith("psycopg")
 
 
 def favorite_rows():
     with favorites_connection() as connection:
-        rows = connection.execute(
-            """
-            SELECT product_id, product_name, brand, category, link, payload, created_at
-            FROM favorites
-            ORDER BY created_at DESC
-            """
-        ).fetchall()
+        query = """
+        SELECT product_id, product_name, brand, category, link, payload, created_at
+        FROM favorites
+        ORDER BY created_at DESC
+        """
+        if favorites_uses_postgres(connection):
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+        else:
+            rows = connection.execute(query).fetchall()
 
     output = []
     for product_id, product_name, brand, category, link, payload, created_at in rows:
@@ -2607,35 +2626,57 @@ def add_favorite_rows(rows):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     inserted = 0
     with favorites_connection() as connection:
+        use_postgres = favorites_uses_postgres(connection)
+        postgres_sql = """
+            INSERT INTO favorites (
+                product_id, product_name, brand, category, link, payload, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, COALESCE(
+                (SELECT created_at FROM favorites WHERE product_id = %s),
+                %s
+            ))
+            ON CONFLICT (product_id) DO UPDATE SET
+                product_name = EXCLUDED.product_name,
+                brand = EXCLUDED.brand,
+                category = EXCLUDED.category,
+                link = EXCLUDED.link,
+                payload = EXCLUDED.payload
+        """
+        sqlite_sql = """
+            INSERT OR REPLACE INTO favorites (
+                product_id, product_name, brand, category, link, payload, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, COALESCE(
+                (SELECT created_at FROM favorites WHERE product_id = ?),
+                ?
+            ))
+        """
+        cursor = connection.cursor() if use_postgres else None
         for row in rows:
             record = json_safe(dict(row))
             product_id = str(record.get("Ürün ID") or "").strip()
             if not product_id:
                 continue
-            before = connection.total_changes
-            connection.execute(
-                """
-                INSERT OR REPLACE INTO favorites (
-                    product_id, product_name, brand, category, link, payload, created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, COALESCE(
-                    (SELECT created_at FROM favorites WHERE product_id = ?),
-                    ?
-                ))
-                """,
-                (
-                    product_id,
-                    record.get("Ürün"),
-                    record.get("Marka"),
-                    record.get("Kategori"),
-                    record.get("Link"),
-                    json.dumps(record, ensure_ascii=False),
-                    product_id,
-                    now,
-                ),
+            params = (
+                product_id,
+                record.get("Ürün"),
+                record.get("Marka"),
+                record.get("Kategori"),
+                record.get("Link"),
+                json.dumps(record, ensure_ascii=False),
+                product_id,
+                now,
             )
-            if connection.total_changes > before:
+            if use_postgres:
+                cursor.execute(postgres_sql, params)
                 inserted += 1
+            else:
+                before = connection.total_changes
+                connection.execute(sqlite_sql, params)
+                if connection.total_changes > before:
+                    inserted += 1
+        if cursor:
+            cursor.close()
         connection.commit()
     return inserted
 
@@ -2645,12 +2686,22 @@ def delete_favorites(product_ids):
     if not clean_ids:
         return 0
     with favorites_connection() as connection:
-        connection.executemany(
-            "DELETE FROM favorites WHERE product_id = ?",
-            [(product_id,) for product_id in clean_ids],
-        )
+        if favorites_uses_postgres(connection):
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    "DELETE FROM favorites WHERE product_id = %s",
+                    [(product_id,) for product_id in clean_ids],
+                )
+                deleted_count = cursor.rowcount
+        else:
+            before = connection.total_changes
+            connection.executemany(
+                "DELETE FROM favorites WHERE product_id = ?",
+                [(product_id,) for product_id in clean_ids],
+            )
+            deleted_count = connection.total_changes - before
         connection.commit()
-        return connection.total_changes
+        return deleted_count
 
 
 def excel_download(sheets):
