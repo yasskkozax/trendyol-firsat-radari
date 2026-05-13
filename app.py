@@ -39,7 +39,19 @@ NEKADARSATTI_API_URL = "https://nekadarsatti.com/api/sales-number"
 NEKADARSATTI_PRODUCT_RESEARCH_API_URL = "https://nekadarsatti.com/api/product-research"
 NEKADARSATTI_PUBLIC_API_KEY = os.getenv("NEKADARSATTI_API_KEY") or "aJ9cgcACBCY1d3dWmJhWW8n2v2GhgP"
 NEKADARSATTI_SESSION_COOKIE = os.getenv("NEKADARSATTI_COOKIE", "").strip()
-NEKADARSATTI_QUERY_LIMIT = int(os.getenv("NEKADARSATTI_QUERY_LIMIT", "10000" if NEKADARSATTI_SESSION_COOKIE else "30"))
+
+
+def safe_positive_int(value, default):
+    try:
+        return max(1, int(str(value).strip()))
+    except (TypeError, ValueError):
+        return default
+
+
+NEKADARSATTI_QUERY_LIMIT = safe_positive_int(
+    os.getenv("NEKADARSATTI_QUERY_LIMIT"),
+    10000 if NEKADARSATTI_SESSION_COOKIE else 30,
+)
 AUTH_QUERY_PARAM = "kozade_auth"
 RUNTIME_DIR = Path(__file__).parent / ".runtime"
 BRAND_STOCK_STATE_PATH = RUNTIME_DIR / "brand_stock_result.json"
@@ -836,10 +848,7 @@ def get_nekadarsatti_query_limit():
     except Exception:
         saved_limit = None
     raw_limit = saved_limit or os.getenv("NEKADARSATTI_QUERY_LIMIT") or NEKADARSATTI_QUERY_LIMIT
-    try:
-        return max(1, int(raw_limit))
-    except (TypeError, ValueError):
-        return 30
+    return safe_positive_int(raw_limit, 10000 if get_nekadarsatti_cookie() else 30)
 
 
 def request_json(url, params=None):
@@ -4353,7 +4362,7 @@ if selected_main_tab == "Fırsat radarı":
         )
         uploaded_file = None
         pasted_sales = ""
-        nks_limit = NEKADARSATTI_QUERY_LIMIT
+        nks_limit = get_nekadarsatti_query_limit()
         nks_delay = 2
         max_stock = 150
         min_sales_3d = 100
@@ -4446,8 +4455,8 @@ if selected_main_tab == "Fırsat radarı":
             nks_limit = st.slider(
                 "Nekadarsatti sorgu hakkı",
                 min_value=1,
-                max_value=NEKADARSATTI_QUERY_LIMIT,
-                value=5,
+                max_value=get_nekadarsatti_query_limit(),
+                value=min(5, get_nekadarsatti_query_limit()),
             )
             nks_delay = st.slider(
                 "Sorgular arası bekleme",
